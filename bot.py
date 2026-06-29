@@ -285,12 +285,14 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 tree = bot.tree
 STATUS_EMOJI = {
     "online":  "🟢",
-    "idle":    "🟡",
+    "idle":    "🌙",
     "dnd":     "🔴",
-    "offline": "⚫",
+    "offline": "🔲",
 }
 @bot.event
 async def on_ready():
+    await bot.change_presence(status=discord.Status.invisible)
+    print(f"[BOT] Logged in as {bot.user}")
     print(f"[BOT] Logged in as {bot.user} ({bot.user.id})")
     print(f"[BOT] Guilds: {[g.name for g in bot.guilds]}")
     try:
