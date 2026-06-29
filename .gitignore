@@ -1,0 +1,16 @@
+.env.example
+presence.db
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+.venv/
+ENV/
+exports/
+.DS_Store
+Thumbs.db
+.vscode/
+*.log

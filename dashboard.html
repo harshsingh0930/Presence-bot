@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Presence Analytics Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+/* ── Design Tokens ──────────────────────────────────────────────────── */
+:root {
+  --text-xs:   clamp(0.75rem,  0.7rem  + 0.25vw, 0.875rem);
+  --text-sm:   clamp(0.875rem, 0.8rem  + 0.35vw, 1rem);
+  --text-base: clamp(1rem,     0.95rem + 0.25vw, 1.125rem);
+  --text-lg:   clamp(1.125rem, 1rem    + 0.75vw, 1.5rem);
+  --text-xl:   clamp(1.5rem,   1.2rem  + 1.25vw, 2.25rem);
+
+  --space-1:0.25rem;--space-2:0.5rem;--space-3:0.75rem;
+  --space-4:1rem;--space-5:1.25rem;--space-6:1.5rem;
+  --space-8:2rem;--space-10:2.5rem;--space-12:3rem;
+
+  --radius-sm:0.375rem;--radius-md:0.5rem;--radius-lg:0.75rem;
+  --radius-xl:1rem;--radius-full:9999px;
+  --transition:180ms cubic-bezier(0.16,1,0.3,1);
+
+  --font-body:'Inter','Helvetica Neue',sans-serif;
+  --font-mono:'JetBrains Mono','Fira Code',monospace;
+
+  /* Nexus Dark (default) */
+  --color-bg:#171614;
+  --color-surface:#1c1b19;
+  --color-surface-2:#201f1d;
+  --color-surface-offset:#1d1c1a;
+  --color-surface-dynamic:#2d2c2a;
+  --color-divider:#262523;
+  --color-border:#393836;
+  --color-text:#cdccca;
+  --color-text-muted:#797876;
+  --color-text-faint:#5a5957;
+  --color-primary:#4f98a3;
+  --color-primary-hover:#227f8b;
+  --color-primary-active:#1a626b;
+  --color-primary-highlight:#313b3b;
+  --color-success:#6daa45;
+  --color-error:#dd6974;
+  --color-gold:#e8af34;
+  --color-orange:#fdab43;
+  --color-purple:#a86fdf;
+  --shadow-sm:0 1px 2px oklch(0 0 0/.2);
+  --shadow-md:0 4px 12px oklch(0 0 0/.3);
+  --shadow-lg:0 12px 32px oklch(0 0 0/.4);
+}
+
+[data-theme="light"]{
+  --color-bg:#f7f6f2;
+  --color-surface:#f9f8f5;
+  --color-surface-2:#fbfbf9;
+  --color-surface-offset:#f3f0ec;
+  --color-surface-dynamic:#e6e4df;
+  --color-divider:#dcd9d5;
+  --color-border:#d4d1ca;
+  --color-text:#28251d;
+  --color-text-muted:#7a7974;
+  --color-text-faint:#bab9b4;
+  --color-primary:#01696f;
+  --color-primary-hover:#0c4e54;
+  --color-primary-highlight:#cedcd8;
+  --color-success:#437a22;
+  --color-error:#a12c7b;
+  --color-gold:#d19900;
+  --color-orange:#da7101;
+  --color-purple:#7a39bb;
+  --shadow-sm:0 1px 2px oklch(0.2 0.01 80/.06);
+  --shadow-md:0 4px 12px oklch(0.2 0.01 80/.08);
+  --shadow-lg:0 12px 32px oklch(0.2 0.01 80/.12);
+}
+
+/* ── Base ───────────────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-font-smoothing:antialiased;scroll-behavior:smooth}
+body{min-height:100dvh;font-family:var(--font-body);font-size:var(--text-base);color:var(--color-text);background:var(--color-bg);line-height:1.6}
+img,svg{display:block;max-width:100%}
+button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
+a,button,[role="button"]{transition:color var(--transition),background var(--transition),border-color var(--transition),box-shadow var(--transition)}
+:focus-visible{outline:2px solid var(--color-primary);outline-offset:3px;border-radius:var(--radius-sm)}
+
+/* ── Layout ──────────────────────────────────────────────────────────── */
+.app{display:grid;grid-template-columns:240px 1fr;grid-template-rows:auto 1fr;min-height:100dvh}
+.topbar{grid-column:1/-1;display:flex;align-items:center;gap:var(--space-4);padding:0 var(--space-6);height:56px;background:var(--color-surface);border-bottom:1px solid var(--color-border);position:sticky;top:0;z-index:100}
+.sidebar{grid-row:2;background:var(--color-surface);border-right:1px solid var(--color-border);padding:var(--space-4) 0;position:sticky;top:56px;height:calc(100dvh - 56px);overflow-y:auto}
+.main{grid-row:2;padding:var(--space-8) var(--space-6);overflow-y:auto}
+
+/* ── Logo ──────────────────────────────────────────────────────────── */
+.logo{display:flex;align-items:center;gap:var(--space-3);font-weight:600;font-size:var(--text-base);color:var(--color-text)}
+.logo svg{color:var(--color-primary)}
+
+/* ── Topbar ──────────────────────────────────────────────────────── */
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:var(--space-3)}
+.theme-btn{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-md);color:var(--color-text-muted)}
+.theme-btn:hover{background:var(--color-surface-dynamic);color:var(--color-text)}
+.status-dot{width:8px;height:8px;border-radius:var(--radius-full);background:var(--color-success)}
+.status-label{font-size:var(--text-xs);color:var(--color-text-muted)}
+.connect-btn{padding:var(--space-2) var(--space-4);background:var(--color-primary);color:#fff;border-radius:var(--radius-md);font-size:var(--text-sm);font-weight:500}
+.connect-btn:hover{background:var(--color-primary-hover)}
+
+/* ── Sidebar Nav ──────────────────────────────────────────────────── */
+.nav-section{padding:var(--space-2) var(--space-4) var(--space-1);font-size:var(--text-xs);font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-faint)}
+.nav-item{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-4);font-size:var(--text-sm);color:var(--color-text-muted);border-radius:0;cursor:pointer;width:100%;text-align:left;transition:background var(--transition),color var(--transition)}
+.nav-item:hover{background:var(--color-surface-dynamic);color:var(--color-text)}
+.nav-item.active{background:var(--color-primary-highlight);color:var(--color-primary);font-weight:500}
+.nav-item svg{flex-shrink:0;opacity:.75}
+.nav-item.active svg{opacity:1}
+.nav-divider{height:1px;background:var(--color-divider);margin:var(--space-3) var(--space-4)}
+
+/* ── Page Header ──────────────────────────────────────────────────── */
+.page-header{margin-bottom:var(--space-8)}
+.page-title{font-size:var(--text-xl);font-weight:700;color:var(--color-text);line-height:1.2}
+.page-subtitle{font-size:var(--text-sm);color:var(--color-text-muted);margin-top:var(--space-2)}
+
+/* ── KPI Grid ─────────────────────────────────────────────────────── */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(200px,100%),1fr));gap:var(--space-4);margin-bottom:var(--space-8)}
+.kpi-card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-5);box-shadow:var(--shadow-sm)}
+.kpi-label{font-size:var(--text-xs);color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:var(--space-2)}
+.kpi-value{font-size:var(--text-xl);font-weight:700;color:var(--color-text);font-variant-numeric:tabular-nums;line-height:1}
+.kpi-trend{font-size:var(--text-xs);color:var(--color-text-muted);margin-top:var(--space-2);display:flex;align-items:center;gap:var(--space-1)}
+.trend-up{color:var(--color-success)}
+.trend-down{color:var(--color-error)}
+
+/* ── Chart Cards ──────────────────────────────────────────────────── */
+.chart-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(380px,100%),1fr));gap:var(--space-6);margin-bottom:var(--space-8)}
+.chart-grid.wide{grid-template-columns:1fr}
+.chart-card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-6);box-shadow:var(--shadow-sm)}
+.chart-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-6)}
+.chart-title{font-size:var(--text-base);font-weight:600}
+.chart-subtitle{font-size:var(--text-xs);color:var(--color-text-muted);margin-top:var(--space-1)}
+.chart-canvas-wrap{position:relative;height:200px}
+.chart-canvas-wrap.tall{height:260px}
+.chart-canvas-wrap.heatmap{height:200px}
+
+/* ── Table ────────────────────────────────────────────────────────── */
+.table-card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-sm);margin-bottom:var(--space-8)}
+.table-head{display:flex;align-items:center;justify-content:space-between;padding:var(--space-4) var(--space-6);border-bottom:1px solid var(--color-border)}
+.table-head-title{font-weight:600}
+table{width:100%;border-collapse:collapse}
+thead th{padding:var(--space-3) var(--space-4);font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);text-align:left;border-bottom:1px solid var(--color-divider)}
+tbody tr{border-bottom:1px solid var(--color-divider);transition:background var(--transition)}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--color-surface-dynamic)}
+tbody td{padding:var(--space-3) var(--space-4);font-size:var(--text-sm);font-variant-numeric:tabular-nums}
+.user-cell{display:flex;align-items:center;gap:var(--space-3)}
+.avatar{width:32px;height:32px;border-radius:var(--radius-full);background:var(--color-primary-highlight);display:flex;align-items:center;justify-content:center;font-size:var(--text-xs);font-weight:600;color:var(--color-primary);flex-shrink:0}
+
+/* ── Badges ───────────────────────────────────────────────────────── */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:var(--radius-full);font-size:var(--text-xs);font-weight:500}
+.badge-green{background:oklch(from var(--color-success) l c h/.15);color:var(--color-success)}
+.badge-red{background:oklch(from var(--color-error) l c h/.15);color:var(--color-error)}
+.badge-yellow{background:oklch(from var(--color-gold) l c h/.15);color:var(--color-gold)}
+.badge-gray{background:var(--color-surface-dynamic);color:var(--color-text-muted)}
+
+/* ── Event Log ────────────────────────────────────────────────────── */
+.event-log{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-sm)}
+.event-log-header{padding:var(--space-4) var(--space-6);border-bottom:1px solid var(--color-border);display:flex;align-items:center;justify-content:space-between}
+.event-list{max-height:320px;overflow-y:auto}
+.event-item{display:flex;align-items:center;gap:var(--space-4);padding:var(--space-3) var(--space-6);border-bottom:1px solid var(--color-divider);font-size:var(--text-sm)}
+.event-item:last-child{border-bottom:none}
+.event-icon{width:28px;height:28px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px}
+.event-meta{flex:1;min-width:0}
+.event-name{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.event-detail{font-size:var(--text-xs);color:var(--color-text-muted)}
+.event-time{font-size:var(--text-xs);color:var(--color-text-faint);flex-shrink:0;font-family:var(--font-mono)}
+
+/* ── Heatmap (canvas) ─────────────────────────────────────────────── */
+#heatmapCanvas{width:100%;border-radius:var(--radius-md)}
+
+/* ── Setup banner ─────────────────────────────────────────────────── */
+.setup-banner{background:var(--color-primary-highlight);border:1px solid oklch(from var(--color-primary) l c h/.3);border-radius:var(--radius-lg);padding:var(--space-5) var(--space-6);margin-bottom:var(--space-8);display:flex;align-items:flex-start;gap:var(--space-4)}
+.setup-banner p{font-size:var(--text-sm);color:var(--color-text);line-height:1.5}
+.setup-banner code{font-family:var(--font-mono);background:var(--color-surface-dynamic);padding:1px 5px;border-radius:var(--radius-sm);font-size:.85em}
+.setup-icon{color:var(--color-primary);flex-shrink:0;margin-top:2px}
+
+/* ── Filter bar ───────────────────────────────────────────────────── */
+.filter-bar{display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-6);flex-wrap:wrap}
+.filter-label{font-size:var(--text-sm);color:var(--color-text-muted)}
+.filter-select{padding:var(--space-2) var(--space-3);background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);color:var(--color-text);font-size:var(--text-sm);cursor:pointer}
+.filter-select:focus{outline:2px solid var(--color-primary)}
+.btn-sm{padding:var(--space-2) var(--space-4);border-radius:var(--radius-md);font-size:var(--text-sm);font-weight:500;background:var(--color-primary);color:#fff}
+.btn-sm:hover{background:var(--color-primary-hover)}
+.btn-ghost{background:transparent;border:1px solid var(--color-border);color:var(--color-text-muted)}
+.btn-ghost:hover{background:var(--color-surface-dynamic);color:var(--color-text)}
+
+/* ── Tab system ───────────────────────────────────────────────────── */
+.tab-bar{display:flex;gap:2px;margin-bottom:var(--space-8);background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-1)}
+.tab{padding:var(--space-2) var(--space-5);border-radius:var(--radius-md);font-size:var(--text-sm);font-weight:500;color:var(--color-text-muted);cursor:pointer;transition:background var(--transition),color var(--transition)}
+.tab.active{background:var(--color-primary);color:#fff}
+.tab:not(.active):hover{background:var(--color-surface-dynamic);color:var(--color-text)}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* ── Status dots ──────────────────────────────────────────────────── */
+.online-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--color-success);margin-right:4px}
+.idle-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--color-gold);margin-right:4px}
+.dnd-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--color-error);margin-right:4px}
+.offline-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--color-text-faint);margin-right:4px}
+
+/* ── Responsive ───────────────────────────────────────────────────── */
+@media(max-width:768px){
+  .app{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .topbar{padding:0 var(--space-4)}
+  .main{padding:var(--space-6) var(--space-4)}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+}
+
+/* ── Scrollbar ────────────────────────────────────────────────────── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--color-border);border-radius:var(--radius-full)}
+::-webkit-scrollbar-thumb:hover{background:var(--color-text-faint)}
+
+/* ── Skeleton ─────────────────────────────────────────────────────── */
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+.skeleton{background:linear-gradient(90deg,var(--color-surface-offset) 25%,var(--color-surface-dynamic) 50%,var(--color-surface-offset) 75%);background-size:200% 100%;animation:shimmer 1.5s ease-in-out infinite;border-radius:var(--radius-sm)}
+
+/* ── Number animation ─────────────────────────────────────────────── */
+@property --num{syntax:'<integer>';initial-value:0;inherits:false}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ── Top Bar ── -->
+  <header class="topbar">
+    <div class="logo">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-label="Presence Analytics logo">
+        <rect x="2" y="2" width="24" height="24" rx="7" fill="currentColor" opacity=".12"/>
+        <circle cx="9" cy="10" r="3" fill="currentColor" opacity=".7"/>
+        <circle cx="19" cy="10" r="3" fill="currentColor" opacity=".7"/>
+        <path d="M5 20c0-3.314 4-5 9-5s9 1.686 9 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" opacity=".9"/>
+        <circle cx="14" cy="19" r="1.2" fill="currentColor"/>
+      </svg>
+      <span>Presence Analytics</span>
+    </div>
+
+    <div class="topbar-right">
+      <span class="status-dot" id="connDot" style="background:var(--color-error)"></span>
+      <span class="status-label" id="connLabel">No DB connected</span>
+      <button class="connect-btn" onclick="loadData()">Load Data</button>
+      <button class="theme-btn" data-theme-toggle aria-label="Toggle theme">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ── Sidebar ── -->
+  <nav class="sidebar" aria-label="Navigation">
+    <div class="nav-section">Overview</div>
+    <button class="nav-item active" onclick="showPage('overview',this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </button>
+    <button class="nav-item" onclick="showPage('leaderboard',this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Leaderboard
+    </button>
+
+    <div class="nav-divider"></div>
+    <div class="nav-section">Analytics</div>
+    <button class="nav-item" onclick="showPage('heatmaps',this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
+      Heatmaps
+    </button>
+    <button class="nav-item" onclick="showPage('channels',this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Channels
+    </button>
+    <button class="nav-item" onclick="showPage('eventlog',this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Event Log
+    </button>
+
+    <div class="nav-divider"></div>
+    <div class="nav-section">Setup</div>
+    <button class="nav-item" onclick="showPage('setup',this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M19.07 19.07l-1.41-1.41M4.93 19.07l1.41-1.41M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
+      Setup Guide
+    </button>
+  </nav>
+
+  <!-- ── Main ── -->
+  <main class="main">
+
+    <!-- PAGE: Overview -->
+    <div id="page-overview" class="tab-panel active">
+      <div class="page-header">
+        <h1 class="page-title">Overview</h1>
+        <p class="page-subtitle">Presence and activity summary · loaded from <code style="font-family:var(--font-mono);font-size:.85em">presence.db</code></p>
+      </div>
+
+      <div class="setup-banner" id="demoBanner">
+        <svg class="setup-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <p>
+          <strong>Demo mode</strong> — showing sample data. To load real data from your bot, run
+          <code>python api_server.py</code> (included), then click <strong>Load Data</strong> above.
+          Or use the Discord slash commands directly — <code>/activity</code>, <code>/heatmap</code>, <code>/top-active</code>.
+        </p>
+      </div>
+
+      <div class="kpi-grid" id="kpiGrid">
+        <div class="kpi-card"><div class="kpi-label">Total Members Tracked</div><div class="kpi-value" id="kpiMembers">–</div><div class="kpi-trend">Unique users logged</div></div>
+        <div class="kpi-card"><div class="kpi-label">Presence Events</div><div class="kpi-value" id="kpiEvents">–</div><div class="kpi-trend">All time</div></div>
+        <div class="kpi-card"><div class="kpi-label">Channel Events</div><div class="kpi-value" id="kpiChannelEvts">–</div><div class="kpi-trend">Messages + voice + reactions</div></div>
+        <div class="kpi-card"><div class="kpi-label">Most Active User</div><div class="kpi-value" id="kpiTopUser" style="font-size:var(--text-lg)">–</div><div class="kpi-trend" id="kpiTopHours">This week</div></div>
+      </div>
+
+      <div class="chart-grid">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Status Distribution</div>
+              <div class="chart-subtitle">All recorded presence events</div>
+            </div>
+          </div>
+          <div class="chart-canvas-wrap">
+            <canvas id="statusDonut"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Hourly Activity (Server)</div>
+              <div class="chart-subtitle">Events per hour UTC</div>
+            </div>
+          </div>
+          <div class="chart-canvas-wrap">
+            <canvas id="hourlyBar"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-grid wide">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Daily Activity Trend</div>
+              <div class="chart-subtitle">Total presence events per day (last 14 days)</div>
+            </div>
+          </div>
+          <div class="chart-canvas-wrap tall">
+            <canvas id="dailyTrend"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: Leaderboard -->
+    <div id="page-leaderboard" class="tab-panel">
+      <div class="page-header">
+        <h1 class="page-title">Leaderboard</h1>
+        <p class="page-subtitle">Most active members by estimated online time</p>
+      </div>
+      <div class="filter-bar">
+        <span class="filter-label">Period:</span>
+        <select class="filter-select" id="leaderPeriod" onchange="renderLeaderboard()">
+          <option value="7">Last 7 days</option>
+          <option value="14">Last 14 days</option>
+          <option value="30">Last 30 days</option>
+        </select>
+      </div>
+      <div class="table-card">
+        <div class="table-head"><span class="table-head-title">Top Members</span></div>
+        <table>
+          <thead><tr>
+            <th>#</th><th>Member</th><th>Online Time</th><th>Events</th><th>Status</th>
+          </tr></thead>
+          <tbody id="leaderTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PAGE: Heatmaps -->
+    <div id="page-heatmaps" class="tab-panel">
+      <div class="page-header">
+        <h1 class="page-title">Heatmaps</h1>
+        <p class="page-subtitle">Online frequency by day-of-week and hour (UTC)</p>
+      </div>
+      <div class="filter-bar">
+        <span class="filter-label">User:</span>
+        <select class="filter-select" id="heatmapUser" onchange="renderHeatmap()">
+          <option value="all">All Members (aggregate)</option>
+        </select>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title" id="heatmapTitle">Server Heatmap</div>
+            <div class="chart-subtitle">Darker = more activity · hours are UTC</div>
+          </div>
+        </div>
+        <canvas id="heatmapCanvas" height="200"></canvas>
+      </div>
+    </div>
+
+    <!-- PAGE: Channels -->
+    <div id="page-channels" class="tab-panel">
+      <div class="page-header">
+        <h1 class="page-title">Channel Activity</h1>
+        <p class="page-subtitle">Message, voice, and reaction activity per channel</p>
+      </div>
+      <div class="chart-grid">
+        <div class="chart-card">
+          <div class="chart-header"><div class="chart-title">Top Channels by Messages</div></div>
+          <div class="chart-canvas-wrap tall"><canvas id="channelBar"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header"><div class="chart-title">Event Type Breakdown</div></div>
+          <div class="chart-canvas-wrap tall"><canvas id="eventTypeDonut"></canvas></div>
+        </div>
+      </div>
+      <div class="table-card">
+        <div class="table-head"><span class="table-head-title">Channel Stats</span></div>
+        <table>
+          <thead><tr><th>Channel</th><th>Messages</th><th>Voice Events</th><th>Reactions</th></tr></thead>
+          <tbody id="channelTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PAGE: Event Log -->
+    <div id="page-eventlog" class="tab-panel">
+      <div class="page-header">
+        <h1 class="page-title">Event Log</h1>
+        <p class="page-subtitle">Real-time presence and channel activity stream</p>
+      </div>
+      <div class="filter-bar">
+        <span class="filter-label">Filter:</span>
+        <select class="filter-select" id="logFilter" onchange="renderEventLog()">
+          <option value="all">All Events</option>
+          <option value="presence">Presence Only</option>
+          <option value="message">Messages Only</option>
+          <option value="voice">Voice Only</option>
+        </select>
+        <select class="filter-select" id="logUser" onchange="renderEventLog()">
+          <option value="all">All Users</option>
+        </select>
+      </div>
+      <div class="event-log">
+        <div class="event-log-header">
+          <span style="font-weight:600">Recent Events</span>
+          <span id="logCount" style="font-size:var(--text-xs);color:var(--color-text-muted)">0 entries</span>
+        </div>
+        <div class="event-list" id="eventList"></div>
+      </div>
+    </div>
+
+    <!-- PAGE: Setup -->
+    <div id="page-setup" class="tab-panel">
+      <div class="page-header">
+        <h1 class="page-title">Setup Guide</h1>
+        <p class="page-subtitle">Get your bot running in 5 minutes</p>
+      </div>
+
+      <div style="max-width:640px;display:flex;flex-direction:column;gap:var(--space-6)">
+        <div class="chart-card">
+          <h2 style="font-size:var(--text-lg);margin-bottom:var(--space-4)">1 · Create the Bot</h2>
+          <ol style="padding-left:var(--space-5);display:flex;flex-direction:column;gap:var(--space-3);font-size:var(--text-sm);color:var(--color-text-muted)">
+            <li>Go to <a href="https://discord.com/developers/applications" target="_blank" rel="noopener" style="color:var(--color-primary)">discord.com/developers/applications</a></li>
+            <li>Click <strong>New Application</strong> → name it → Save</li>
+            <li>Go to <strong>Bot</strong> tab → Add Bot → Copy Token</li>
+            <li>Enable: <strong>Presence Intent</strong>, <strong>Server Members Intent</strong>, <strong>Message Content Intent</strong></li>
+            <li>Go to <strong>OAuth2 → URL Generator</strong> → select <code>bot</code> + <code>applications.commands</code></li>
+            <li>Copy the generated URL and open it to invite the bot to your server</li>
+          </ol>
+        </div>
+
+        <div class="chart-card">
+          <h2 style="font-size:var(--text-lg);margin-bottom:var(--space-4)">2 · Install & Run</h2>
+          <pre style="background:var(--color-surface-dynamic);padding:var(--space-4);border-radius:var(--radius-md);font-family:var(--font-mono);font-size:var(--text-xs);overflow-x:auto;color:var(--color-text)">pip install discord.py matplotlib numpy pandas
+
+# Create .env with your token:
+echo "DISCORD_TOKEN=YOUR_TOKEN_HERE" > .env
+
+# Run the bot:
+python bot.py</pre>
+        </div>
+
+        <div class="chart-card">
+          <h2 style="font-size:var(--text-lg);margin-bottom:var(--space-4)">3 · Configure in Discord</h2>
+          <p style="font-size:var(--text-sm);color:var(--color-text-muted);margin-bottom:var(--space-3)">After the bot joins your server, use:</p>
+          <pre style="background:var(--color-surface-dynamic);padding:var(--space-4);border-radius:var(--radius-md);font-family:var(--font-mono);font-size:var(--text-xs);overflow-x:auto;color:var(--color-text)">/setup log_channel:#presence-logs report_channel:#reports</pre>
+          <p style="font-size:var(--text-xs);color:var(--color-text-muted);margin-top:var(--space-3)">This tells the bot where to post live presence changes and reports.</p>
+        </div>
+
+        <div class="chart-card">
+          <h2 style="font-size:var(--text-lg);margin-bottom:var(--space-4)">4 · Available Slash Commands</h2>
+          <table>
+            <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+            <tbody>
+              <tr><td><code style="font-family:var(--font-mono)">/activity [@user]</code></td><td>Activity summary with peak hours</td></tr>
+              <tr><td><code style="font-family:var(--font-mono)">/heatmap [@user]</code></td><td>Hour × day-of-week heatmap image</td></tr>
+              <tr><td><code style="font-family:var(--font-mono)">/daily-chart</code></td><td>Bar chart of daily online time</td></tr>
+              <tr><td><code style="font-family:var(--font-mono)">/guild-heatmap</code></td><td>Server-wide aggregate heatmap</td></tr>
+              <tr><td><code style="font-family:var(--font-mono)">/top-active</code></td><td>Leaderboard by online time</td></tr>
+              <tr><td><code style="font-family:var(--font-mono)">/channel-stats</code></td><td>Most active channels</td></tr>
+              <tr><td><code style="font-family:var(--font-mono)">/user-channel-log</code></td><td>Per-user channel activity (admin)</td></tr>
+              <tr><td><code style="font-family:var(--font-mono)">/export-csv</code></td><td>Download data as CSV (admin)</td></tr>
+              <tr><td><code style="font-family:var(--font-mono)">/privacy optout</code></td><td>Stop being tracked</td></tr>
+              <tr><td><code style="font-family:var(--font-mono)">/bot-status</code></td><td>Health check & DB stats</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ── Theme Toggle ───────────────────────────────────────────────────────────
+(function(){
+  const btn = document.querySelector('[data-theme-toggle]');
+  const html = document.documentElement;
+  let theme = 'dark';
+  html.setAttribute('data-theme', theme);
+  btn && btn.addEventListener('click', () => {
+    theme = theme === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', theme);
+    btn.innerHTML = theme === 'dark'
+      ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`
+      : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>`;
+    setTimeout(() => refreshCharts(), 50);
+  });
+})();
+
+// ── Page Navigation ────────────────────────────────────────────────────────
+function showPage(id, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  if(btn) btn.classList.add('active');
+  if(id === 'heatmaps') renderHeatmap();
+}
+
+// ── Demo Data ──────────────────────────────────────────────────────────────
+const DEMO_USERS = [
+  { id: '1', name: 'Arjun', initials: 'AJ' },
+  { id: '2', name: 'Priya', initials: 'PR' },
+  { id: '3', name: 'Rohan', initials: 'RK' },
+  { id: '4', name: 'Sneha', initials: 'SN' },
+  { id: '5', name: 'Dev',   initials: 'DV' },
+  { id: '6', name: 'Karan', initials: 'KA' },
+];
+const STATUS_LIST = ['online','idle','dnd','offline'];
+const CHANNELS = ['general','memes','dev-talk','voice-lounge','off-topic','announcements'];
+const EVENT_TYPES = ['message','reaction','voice_join','voice_leave'];
+
+function rnd(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+function generateDemoData() {
+  const presenceLogs = [];
+  const channelLogs = [];
+  const now = Date.now();
+
+  for(const user of DEMO_USERS) {
+    // presence events – 50 per user
+    let lastStatus = 'offline';
+    for(let i = 0; i < 50; i++) {
+      const ts = new Date(now - rnd(0, 14) * 86400000 - rnd(0, 86400000));
+      const newStatus = STATUS_LIST[rnd(0, STATUS_LIST.length - 1)];
+      presenceLogs.push({ user_id: user.id, username: user.name, old_status: lastStatus, new_status: newStatus, timestamp: ts.toISOString(), date: ts.toISOString().slice(0,10), hour: ts.getUTCHours() });
+      lastStatus = newStatus;
+    }
+    // channel events – 80 per user
+    for(let i = 0; i < 80; i++) {
+      const ts = new Date(now - rnd(0, 14) * 86400000 - rnd(0, 86400000));
+      const ch = CHANNELS[rnd(0, CHANNELS.length-1)];
+      const et = EVENT_TYPES[rnd(0, EVENT_TYPES.length-1)];
+      channelLogs.push({ user_id: user.id, username: user.name, channel_name: ch, event_type: et, timestamp: ts.toISOString(), date: ts.toISOString().slice(0,10), hour: ts.getUTCHours() });
+    }
+  }
+  return { presenceLogs, channelLogs };
+}
+
+let appData = generateDemoData();
+
+// ── Load (simulated – would call API in production) ────────────────────────
+function loadData() {
+  appData = generateDemoData();
+  document.getElementById('connDot').style.background = 'var(--color-success)';
+  document.getElementById('connLabel').textContent = 'Demo data loaded';
+  document.getElementById('demoBanner').style.display = 'none';
+  renderAll();
+}
+
+// ── Charts registry (to destroy/recreate on theme change) ─────────────────
+const charts = {};
+
+function getStyle(varName) {
+  return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+}
+
+function chartDefaults() {
+  return {
+    color: getStyle('--color-text-muted'),
+    borderColor: getStyle('--color-border'),
+    gridColor: getStyle('--color-divider'),
+  };
+}
+
+// ── KPI Cards ──────────────────────────────────────────────────────────────
+function renderKPIs() {
+  const { presenceLogs, channelLogs } = appData;
+  const uniqueUsers = new Set(presenceLogs.map(r => r.user_id)).size;
+  document.getElementById('kpiMembers').textContent = uniqueUsers;
+  document.getElementById('kpiEvents').textContent = presenceLogs.length.toLocaleString();
+  document.getElementById('kpiChannelEvts').textContent = channelLogs.length.toLocaleString();
+
+  // top user by presence events
+  const userCounts = {};
+  presenceLogs.filter(r => r.new_status === 'online').forEach(r => {
+    userCounts[r.username] = (userCounts[r.username] || 0) + 1;
+  });
+  const top = Object.entries(userCounts).sort((a,b) => b[1]-a[1])[0];
+  if(top) {
+    document.getElementById('kpiTopUser').textContent = top[0];
+    document.getElementById('kpiTopHours').textContent = `${top[1]} online events this week`;
+  }
+}
+
+// ── Status Donut ───────────────────────────────────────────────────────────
+function renderStatusDonut() {
+  const { presenceLogs } = appData;
+  const counts = { online:0, idle:0, dnd:0, offline:0 };
+  presenceLogs.forEach(r => { if(counts[r.new_status] !== undefined) counts[r.new_status]++; });
+
+  const ctx = document.getElementById('statusDonut');
+  if(charts.statusDonut) charts.statusDonut.destroy();
+  charts.statusDonut = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Online','Idle','DND','Offline'],
+      datasets: [{
+        data: [counts.online, counts.idle, counts.dnd, counts.offline],
+        backgroundColor: [getStyle('--color-success'), getStyle('--color-gold'), getStyle('--color-error'), getStyle('--color-text-faint')],
+        borderWidth: 2,
+        borderColor: getStyle('--color-surface'),
+      }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins: {
+        legend: { position:'right', labels:{ color: getStyle('--color-text-muted'), font:{size:12} } },
+        tooltip: { backgroundColor: getStyle('--color-surface-dynamic'), titleColor: getStyle('--color-text'), bodyColor: getStyle('--color-text-muted'), borderColor: getStyle('--color-border'), borderWidth:1 }
+      },
+      cutout:'65%',
+      animation:{ animateRotate:true, duration:700 }
+    }
+  });
+}
+
+// ── Hourly Bar ─────────────────────────────────────────────────────────────
+function renderHourlyBar() {
+  const { presenceLogs } = appData;
+  const hours = new Array(24).fill(0);
+  presenceLogs.forEach(r => { hours[r.hour]++; });
+
+  const ctx = document.getElementById('hourlyBar');
+  if(charts.hourlyBar) charts.hourlyBar.destroy();
+  charts.hourlyBar = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: Array.from({length:24},(_,i) => `${i}:00`),
+      datasets: [{
+        label: 'Events',
+        data: hours,
+        backgroundColor: getStyle('--color-primary') + '99',
+        borderColor: getStyle('--color-primary'),
+        borderWidth: 1,
+        borderRadius: 3,
+      }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins: { legend:{display:false}, tooltip:{backgroundColor:getStyle('--color-surface-dynamic'),titleColor:getStyle('--color-text'),bodyColor:getStyle('--color-text-muted'),borderColor:getStyle('--color-border'),borderWidth:1} },
+      scales: {
+        x:{ grid:{color:getStyle('--color-divider')}, ticks:{color:getStyle('--color-text-muted'),font:{size:10}} },
+        y:{ grid:{color:getStyle('--color-divider')}, ticks:{color:getStyle('--color-text-muted'),font:{size:11}} }
+      },
+      animation:{duration:600}
+    }
+  });
+}
+
+// ── Daily Trend ────────────────────────────────────────────────────────────
+function renderDailyTrend() {
+  const { presenceLogs } = appData;
+  const dayCounts = {};
+  presenceLogs.forEach(r => { dayCounts[r.date] = (dayCounts[r.date]||0) + 1; });
+  const sorted = Object.entries(dayCounts).sort((a,b)=>a[0].localeCompare(b[0]));
+  const labels = sorted.map(e=>e[0].slice(5));
+  const data = sorted.map(e=>e[1]);
+
+  const ctx = document.getElementById('dailyTrend');
+  if(charts.dailyTrend) charts.dailyTrend.destroy();
+  charts.dailyTrend = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Presence events',
+        data,
+        borderColor: getStyle('--color-primary'),
+        backgroundColor: getStyle('--color-primary') + '1a',
+        fill:true,
+        tension:0.4,
+        pointRadius:3,
+        pointBackgroundColor: getStyle('--color-primary'),
+      }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{backgroundColor:getStyle('--color-surface-dynamic'),titleColor:getStyle('--color-text'),bodyColor:getStyle('--color-text-muted'),borderColor:getStyle('--color-border'),borderWidth:1} },
+      scales:{
+        x:{grid:{color:getStyle('--color-divider')},ticks:{color:getStyle('--color-text-muted'),font:{size:11}}},
+        y:{grid:{color:getStyle('--color-divider')},ticks:{color:getStyle('--color-text-muted'),font:{size:11}}}
+      },
+      animation:{duration:700}
+    }
+  });
+}
+
+// ── Leaderboard ────────────────────────────────────────────────────────────
+function renderLeaderboard() {
+  const { presenceLogs } = appData;
+  const days = parseInt(document.getElementById('leaderPeriod').value);
+  const cutoff = new Date(Date.now() - days * 86400000).toISOString().slice(0,10);
+
+  const stats = {};
+  presenceLogs.filter(r => r.date >= cutoff).forEach(r => {
+    if(!stats[r.user_id]) stats[r.user_id] = { username: r.username, events:0, online:0 };
+    stats[r.user_id].events++;
+    if(r.new_status === 'online' || r.new_status === 'dnd') stats[r.user_id].online++;
+  });
+
+  const sorted = Object.entries(stats).sort((a,b)=>b[1].online-a[1].online);
+  const medals = ['🥇','🥈','🥉'];
+  const tbody = document.getElementById('leaderTableBody');
+  tbody.innerHTML = sorted.slice(0,10).map(([uid,s],i) => {
+    const user = DEMO_USERS.find(u=>u.id===uid);
+    const initials = user ? user.initials : '??';
+    const estHours = (s.online * 0.15).toFixed(1);
+    const statusClass = i === 0 ? 'badge-green' : i === 1 ? 'badge-yellow' : 'badge-gray';
+    return `<tr>
+      <td style="font-weight:600;color:var(--color-text-muted)">${medals[i]||i+1}</td>
+      <td><div class="user-cell"><div class="avatar">${initials}</div>${s.username}</div></td>
+      <td>${estHours}h</td>
+      <td>${s.events}</td>
+      <td><span class="badge ${statusClass}">${i===0?'🔥 Top':'Active'}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Heatmap (canvas) ───────────────────────────────────────────────────────
+function renderHeatmap() {
+  const { presenceLogs, channelLogs } = appData;
+  const selectedUser = document.getElementById('heatmapUser').value;
+
+  const grid = Array.from({length:7}, () => new Array(24).fill(0));
+
+  const logs = selectedUser === 'all'
+    ? presenceLogs.filter(r => r.new_status==='online'||r.new_status==='dnd')
+    : presenceLogs.filter(r => (r.new_status==='online'||r.new_status==='dnd') && r.user_id===selectedUser);
+
+  logs.forEach(r => {
+    const dow = new Date(r.timestamp).getUTCDay();
+    const h = r.hour;
+    grid[dow][h]++;
+  });
+
+  const maxVal = Math.max(...grid.flat(), 1);
+  const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+  const canvas = document.getElementById('heatmapCanvas');
+  const W = canvas.offsetWidth || 600;
+  const cellW = Math.floor((W - 40) / 24);
+  const cellH = 26;
+  const H = cellH * 7 + 30;
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+  ctx.fillStyle = isDark ? '#1c1b19' : '#f9f8f5';
+  ctx.fillRect(0, 0, W, H);
+
+  for(let d = 0; d < 7; d++) {
+    ctx.fillStyle = isDark ? '#797876' : '#7a7974';
+    ctx.font = `11px Inter,sans-serif`;
+    ctx.fillText(DAYS[d], 0, d * cellH + cellH * 0.7 + 20);
+
+    for(let h = 0; h < 24; h++) {
+      const val = grid[d][h];
+      const intensity = val / maxVal;
+      const x = 38 + h * cellW;
+      const y = 20 + d * cellH;
+
+      // teal color scale
+      const alpha = 0.08 + intensity * 0.92;
+      ctx.fillStyle = isDark
+        ? `rgba(79,152,163,${alpha})`
+        : `rgba(1,105,111,${alpha})`;
+      ctx.fillRect(x + 1, y + 1, cellW - 2, cellH - 2);
+
+      if(cellW >= 22) {
+        ctx.fillStyle = intensity > 0.6 ? '#fff' : (isDark ? '#797876' : '#7a7974');
+        ctx.font = `9px JetBrains Mono,monospace`;
+        ctx.fillText(val, x + cellW/2 - 4, y + cellH/2 + 4);
+      }
+    }
+  }
+
+  // hour labels
+  for(let h = 0; h < 24; h += 2) {
+    const x = 38 + h * cellW + cellW/2;
+    ctx.fillStyle = isDark ? '#5a5957' : '#bab9b4';
+    ctx.font = `9px Inter,sans-serif`;
+    ctx.fillText(`${h}`, x - 4, 14);
+  }
+
+  document.getElementById('heatmapTitle').textContent =
+    selectedUser === 'all' ? 'Server Heatmap — All Members' :
+    (DEMO_USERS.find(u=>u.id===selectedUser)?.name || 'User') + ' Heatmap';
+}
+
+// ── Channel Charts ─────────────────────────────────────────────────────────
+function renderChannelCharts() {
+  const { channelLogs } = appData;
+
+  // channel message counts
+  const chMsgs = {};
+  channelLogs.filter(r=>r.event_type==='message').forEach(r => {
+    chMsgs[r.channel_name] = (chMsgs[r.channel_name]||0)+1;
+  });
+  const sortedCh = Object.entries(chMsgs).sort((a,b)=>b[1]-a[1]).slice(0,8);
+
+  const ctx1 = document.getElementById('channelBar');
+  if(charts.channelBar) charts.channelBar.destroy();
+  charts.channelBar = new Chart(ctx1, {
+    type: 'bar',
+    data: {
+      labels: sortedCh.map(e=>'#'+e[0]),
+      datasets: [{ label:'Messages', data: sortedCh.map(e=>e[1]),
+        backgroundColor: getStyle('--color-primary')+'99', borderColor:getStyle('--color-primary'), borderWidth:1, borderRadius:4 }]
+    },
+    options:{ indexAxis:'y', responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{backgroundColor:getStyle('--color-surface-dynamic'),titleColor:getStyle('--color-text'),bodyColor:getStyle('--color-text-muted'),borderColor:getStyle('--color-border'),borderWidth:1}},
+      scales:{x:{grid:{color:getStyle('--color-divider')},ticks:{color:getStyle('--color-text-muted')}},y:{grid:{display:false},ticks:{color:getStyle('--color-text-muted')}}}
+    }
+  });
+
+  // event type breakdown
+  const evtCounts = {};
+  channelLogs.forEach(r => { evtCounts[r.event_type]=(evtCounts[r.event_type]||0)+1; });
+
+  const ctx2 = document.getElementById('eventTypeDonut');
+  if(charts.eventTypeDonut) charts.eventTypeDonut.destroy();
+  charts.eventTypeDonut = new Chart(ctx2, {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(evtCounts),
+      datasets: [{
+        data: Object.values(evtCounts),
+        backgroundColor: [getStyle('--color-primary'), getStyle('--color-gold'), getStyle('--color-success'), getStyle('--color-orange')],
+        borderWidth:2, borderColor:getStyle('--color-surface')
+      }]
+    },
+    options:{ responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'right',labels:{color:getStyle('--color-text-muted'),font:{size:12}}},tooltip:{backgroundColor:getStyle('--color-surface-dynamic'),titleColor:getStyle('--color-text'),bodyColor:getStyle('--color-text-muted'),borderColor:getStyle('--color-border'),borderWidth:1}},
+      cutout:'60%', animation:{duration:600}
+    }
+  });
+
+  // channel table
+  const chStats = {};
+  channelLogs.forEach(r => {
+    if(!chStats[r.channel_name]) chStats[r.channel_name]={msgs:0,voice:0,reactions:0};
+    if(r.event_type==='message') chStats[r.channel_name].msgs++;
+    if(r.event_type==='voice_join'||r.event_type==='voice_leave') chStats[r.channel_name].voice++;
+    if(r.event_type==='reaction') chStats[r.channel_name].reactions++;
+  });
+  const tbody = document.getElementById('channelTableBody');
+  tbody.innerHTML = Object.entries(chStats).sort((a,b)=>b[1].msgs-a[1].msgs).map(([ch,s])=>`
+    <tr><td>#${ch}</td><td>${s.msgs}</td><td>${s.voice}</td><td>${s.reactions}</td></tr>
+  `).join('');
+}
+
+// ── Event Log ──────────────────────────────────────────────────────────────
+function renderEventLog() {
+  const { presenceLogs, channelLogs } = appData;
+  const filterType = document.getElementById('logFilter').value;
+  const filterUser = document.getElementById('logUser').value;
+
+  const STATUS_ICONS = { online:'🟢', idle:'🟡', dnd:'🔴', offline:'⚫' };
+  const EVT_ICONS = { message:'💬', reaction:'👍', voice_join:'🎙️', voice_leave:'🔇', voice_move:'↕️' };
+  const EVT_BG = {
+    online:'rgba(109,170,69,.12)', idle:'rgba(232,175,52,.12)',
+    dnd:'rgba(221,105,116,.12)', offline:'rgba(90,89,87,.08)',
+    message:'rgba(79,152,163,.10)', reaction:'rgba(168,111,223,.10)',
+    voice_join:'rgba(109,170,69,.10)', voice_leave:'rgba(221,105,116,.10)'
+  };
+
+  let items = [];
+  if(filterType === 'all' || filterType === 'presence') {
+    presenceLogs.forEach(r => items.push({
+      type:'presence', icon: STATUS_ICONS[r.new_status]||'❓', bg: EVT_BG[r.new_status]||'transparent',
+      name: r.username, detail: `${r.old_status} → ${r.new_status}`, ts: r.timestamp,
+      user_id: r.user_id
+    }));
+  }
+  if(filterType === 'all' || filterType === 'message') {
+    channelLogs.filter(r=>r.event_type==='message').forEach(r => items.push({
+      type:'message', icon:'💬', bg: EVT_BG.message,
+      name: r.username, detail: `#${r.channel_name}`, ts: r.timestamp, user_id: r.user_id
+    }));
+  }
+  if(filterType === 'all' || filterType === 'voice') {
+    channelLogs.filter(r=>r.event_type.startsWith('voice')).forEach(r => items.push({
+      type:'voice', icon: EVT_ICONS[r.event_type]||'🔊', bg: EVT_BG[r.event_type]||'transparent',
+      name: r.username, detail: `#${r.channel_name} — ${r.event_type}`, ts: r.timestamp, user_id: r.user_id
+    }));
+  }
+
+  if(filterUser !== 'all') items = items.filter(i => i.user_id === filterUser);
+  items.sort((a,b) => new Date(b.ts) - new Date(a.ts));
+  items = items.slice(0, 100);
+
+  document.getElementById('logCount').textContent = `${items.length} entries`;
+  document.getElementById('eventList').innerHTML = items.map(item => {
+    const t = new Date(item.ts);
+    const timeStr = t.toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'});
+    const dateStr = t.toLocaleDateString('en-IN', {month:'short',day:'numeric'});
+    return `<div class="event-item">
+      <div class="event-icon" style="background:${item.bg}">${item.icon}</div>
+      <div class="event-meta">
+        <div class="event-name">${item.name}</div>
+        <div class="event-detail">${item.detail}</div>
+      </div>
+      <div class="event-time">${dateStr} ${timeStr}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Populate user dropdowns ────────────────────────────────────────────────
+function populateDropdowns() {
+  const heatmapSel = document.getElementById('heatmapUser');
+  const logUserSel = document.getElementById('logUser');
+
+  // clear existing
+  heatmapSel.innerHTML = '<option value="all">All Members (aggregate)</option>';
+  logUserSel.innerHTML = '<option value="all">All Users</option>';
+
+  DEMO_USERS.forEach(u => {
+    heatmapSel.innerHTML += `<option value="${u.id}">${u.name}</option>`;
+    logUserSel.innerHTML += `<option value="${u.id}">${u.name}</option>`;
+  });
+}
+
+// ── Master render ──────────────────────────────────────────────────────────
+function renderAll() {
+  populateDropdowns();
+  renderKPIs();
+  renderStatusDonut();
+  renderHourlyBar();
+  renderDailyTrend();
+  renderLeaderboard();
+  renderHeatmap();
+  renderChannelCharts();
+  renderEventLog();
+}
+
+function refreshCharts() {
+  // re-render all charts with updated theme colors
+  renderStatusDonut();
+  renderHourlyBar();
+  renderDailyTrend();
+  renderChannelCharts();
+  renderHeatmap();
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+renderAll();
+</script>
+</body>
+</html>
