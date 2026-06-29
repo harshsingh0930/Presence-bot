@@ -63,6 +63,13 @@ def init_db():
         hour        INTEGER NOT NULL
     )""")
     cur.execute("""
+    CREATE TABLE IF NOT EXISTS optouts (
+    guild_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    PRIMARY KEY (guild_id, user_id)
+)
+""")
+    cur.execute("""
     CREATE TABLE IF NOT EXISTS daily_stats (
         id             INTEGER PRIMARY KEY AUTOINCREMENT,
         guild_id       INTEGER NOT NULL,
