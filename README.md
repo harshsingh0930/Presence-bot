@@ -35,6 +35,8 @@ This project is built to monitor **future** server activity only.
 - Idle -> Offline
 - DND -> Online
 
+![Channel Screenshot](Presence-bot.png)
+
 ### Channel activity
 Depending on your enabled handlers in `bot.py`, the bot can also log:
 - Messages
