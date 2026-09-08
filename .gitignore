@@ -1,16 +1,37 @@
-.env.example
-presence.db
+# Local environment files and secrets
+.env
+.env.*
+
+# SQLite databases, journals, and WAL sidecars
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+
+# Python environments and caches
 __pycache__/
 *.py[cod]
-*.pyo
-*.pyd
-.Python
+.venv/
 venv/
 env/
-.venv/
 ENV/
+.Python
+
+# Frontend dependencies, generated build output, and deployment state
+node_modules/
+dist/
+.vercel/
+
+# Generated reports, exports, local checks, and backups
 exports/
+deliverables/
+.artifacts/
+*.log
+
+# Local editor and operating system files
+.vscode/
+.idea/
 .DS_Store
 Thumbs.db
-.vscode/
-*.log
