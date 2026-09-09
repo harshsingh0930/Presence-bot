@@ -158,7 +158,7 @@ function overview() {
   const d = state.data, peak = d.totals.peakHour;
   const busiest = d.channels[0];
   const activeDay = [...d.series].sort((a, b) => b.events - a.events)[0];
-  return heading('The community <em>pulse.</em>', `A closer look at the people and moments that make ${esc(community())}.`)
+  return heading('The Server’s <em>pulse.</em>', `A closer look at the people and moments that make ${esc(community())}.`)
     + banners() + toolbar() + kpis(d)
     + (!d.events.length ? `<div class="banner">${icon('clock')}<span>No activity was recorded in this window.${state.meta?.last_event ? ` Latest available record: ${esc(fullDate(Date.parse(state.meta.last_event)))} ${zone()}.` : ''}</span><button data-action="all-time">View all time ${icon('arrowRight')}</button></div>` : '')
     + `<div class="dashboard-grid">${chart(d)}${statusPanel(d)}</div><div class="dashboard-grid">${contributors(d)}${activityFeed(d)}</div>`
