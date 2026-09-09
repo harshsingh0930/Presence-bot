@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f7f6f2">
-  <meta name="description" content="A considered view of your Discord community. Presence, conversations, channels, and individual activity reports.">
-  <title>Presence — Community analytics</title>
+  <meta name="description" content="A considered view of your Discord Server. Presence, conversations, channels, and individual activity reports.">
+  <title>Presence analytics</title>
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,8 +18,8 @@
   <a class="skip-link" href="#main">Skip to dashboard</a>
   <aside class="sidebar" id="sidebar" aria-label="Main navigation">
     <a class="brand" href="#overview" aria-label="Presence home"><img src="/assets/favicon.svg" alt="" width="33" height="33"><span>presence<span class="brand-period">.</span></span></a>
-    <div class="workspace-label">YOUR COMMUNITY</div>
-    <div class="workspace"><span class="workspace-mark" id="workspaceMark">P</span><div class="workspace-info"><strong id="workspaceName">Your server</strong><span>Community workspace</span></div><span data-icon="chevrons" class="muted"></span><select id="guildSelect" aria-label="Select Discord server"></select></div>
+    <div class="workspace-label">YOUR SERVER</div>
+    <div class="workspace"><span class="workspace-mark" id="workspaceMark">P</span><div class="workspace-info"><strong id="workspaceName">Your server</strong><span> workspace</span></div><span data-icon="chevrons" class="muted"></span><select id="guildSelect" aria-label="Select Discord server"></select></div>
     <div class="nav-label">WORKSPACE</div>
     <nav class="nav">
       <a href="#overview" data-page="overview"><span data-icon="overview"></span><span>Overview</span><span class="nav-marker"></span></a>
@@ -28,7 +28,7 @@
       <a href="#activity" data-page="activity"><span data-icon="activity"></span><span>Activity log</span></a>
       <a href="#reports" data-page="reports"><span data-icon="reports"></span><span>Reports</span><span class="nav-pill">CSV</span></a>
     </nav>
-    <div class="sidebar-note"><span class="note-rule"></span><p>Small moments.<br><em>A bigger picture.</em></p><div class="note-lines" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span>YOUR COMMUNITY, IN FOCUS</span></div>
+    <div class="sidebar-note"><span class="note-rule"></span><p>Small moments.<br><em>A bigger picture.</em></p><div class="note-lines" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span>YOUR SERVER, IN FOCUS</span></div>
     <div class="sidebar-bottom"><div class="source-line"><span class="status-dot" id="sourceDot"></span><span id="sourceLabel">Connecting…</span><span class="source-version">v1.0</span></div><button class="settings-button" data-action="connect"><span data-icon="settings"></span>Connection settings<span data-icon="arrowUpRight"></span></button></div>
   </aside>
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
@@ -36,17 +36,17 @@
     <header class="topbar">
       <button class="icon-button mobile-menu" data-action="menu" aria-label="Open navigation" aria-expanded="false"><span data-icon="menu"></span></button>
       <div class="breadcrumb"><span>Workspace</span><span class="crumb-slash">/</span><strong id="breadcrumb">Overview</strong></div>
-      <div class="topbar-right"><div class="global-search"><span data-icon="search"></span><input id="globalSearch" type="search" placeholder="Find a member…" aria-label="Find a member" autocomplete="off" aria-controls="searchResults" aria-expanded="false"><kbd>/</kbd><div class="search-results" id="searchResults" hidden></div></div><span class="top-divider"></span><button class="sync-button" data-action="refresh" aria-label="Refresh dashboard"><span data-icon="refresh"></span><span id="syncLabel">Refresh</span></button><span class="owner-mark" title="Community workspace" aria-label="Community workspace">P</span></div>
+      <div class="topbar-right"><div class="global-search"><span data-icon="search"></span><input id="globalSearch" type="search" placeholder="Find a member…" aria-label="Find a member" autocomplete="off" aria-controls="searchResults" aria-expanded="false"><kbd>/</kbd><div class="search-results" id="searchResults" hidden></div></div><span class="top-divider"></span><button class="sync-button" data-action="refresh" aria-label="Refresh dashboard"><span data-icon="refresh"></span><span id="syncLabel">Refresh</span></button><span class="owner-mark" title="workspace" aria-label="workspace">P</span></div>
     </header>
-    <main id="main" tabindex="-1"><div class="loading-state"><div class="loading-bars" aria-hidden="true"><i></i><i></i><i></i><i></i></div><p>Finding your community’s pulse…</p></div></main>
-    <footer class="footer"><span>Made for the moments in between.</span><span id="footerSource">Presence / Community analytics</span></footer>
+    <main id="main" tabindex="-1"><div class="loading-state"><div class="loading-bars" aria-hidden="true"><i></i><i></i><i></i><i></i></div><p>Finding your server’s pulse…</p></div></main>
+    <footer class="footer"><span>Made for the moments in between.</span><span id="footerSource">Presence analytics</span></footer>
   </div>
   <dialog id="connectionDialog" class="dialog">
     <form id="connectionForm">
       <div class="dialog-heading"><div><span class="eyebrow">YOUR DATA, YOUR COMMUNITY</span><h2>Make the connection.</h2></div><button type="button" class="icon-button" data-action="close-dialog" aria-label="Close connection settings"><span data-icon="close"></span></button></div>
       <p class="muted">Connect the read-only API running alongside your Discord bot. Your database stays on its host.</p>
       <label for="apiUrl">API address</label><input id="apiUrl" type="url" placeholder="https://your-api.example.com"><small>Leave empty to use this website’s origin.</small>
-      <label for="serverName">Community name <span class="optional">optional</span></label><input id="serverName" placeholder="e.g. The Common Room" maxlength="64">
+      <label for="serverName">Server name <span class="optional">optional</span></label><input id="serverName" placeholder="e.g. The Common Room" maxlength="64">
       <label for="apiToken">Dashboard access token <span class="optional">if configured</span></label><input id="apiToken" type="password" autocomplete="off" placeholder="Dashboard token, never your Discord bot token"><small>The access token is kept only in this browser tab’s session.</small>
       <p id="connectionError" class="form-error" role="alert"></p>
       <button class="button primary full-width" type="submit" id="connectSubmit">Connect to my bot <span data-icon="arrowRight"></span></button>
